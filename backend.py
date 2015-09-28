@@ -88,4 +88,21 @@ class PlaybackProvider(object):
     def seek(self, time_position):
         return self.audio.set_position(time_position).get()
 
-    def stop()
+    def stop(self):
+        return self.audio.stop_playback().get()
+
+    def get_time_position(self):
+        return self.audio.get_position().get()
+
+class PlaylistProver(object)
+
+    pykka_traversable = True
+
+    def __init__(self,backside):
+        self.backside = backside
+
+    def as_list(self):
+        raise NotImplementedError
+
+    def get_items(self,uri):
+        raise NotImplementedError
