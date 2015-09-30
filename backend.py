@@ -72,7 +72,7 @@ class PlaybackProvider(object):
     def translate_uri(self):
         return uri
 
-    def change_track(track, self);
+    def change_track(track, self):
         uri = self.translate_uri(track.uri)
         if uri != track.uri:
             logger.debug(
@@ -105,4 +105,7 @@ class PlaylistProver(object)
         raise NotImplementedError
 
     def get_items(self,uri):
+        raise NotImplementedError
+
+    def create(self, name):
         raise NotImplementedError
