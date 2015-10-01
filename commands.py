@@ -99,7 +99,7 @@ class Command(object):
     def _usage(self, actions, prog):
         formatter = argparse.HelpFormatter(prog)
         formatter.add_usage(None, actions, [])
-        return formatter format_help().strip()
+        return formatter.format_help().strip()
 
     def format_help(self, prog=None):
         actions = self._build()[1]
@@ -143,4 +143,88 @@ class Command(object):
         for childname, child in self._children.items():
             child._subhelp(' '.join((name, children)), result)
     def parse(self, args, prog=None):
-        
+        prog = prog or os.path.basename(sys.argv[0])
+        try:
+            return self._parse(
+                args, argparse.Namespace(), self._overrides.copy(), prog)
+        except _HelpError:
+            self.exit(0, self.format_help(prog))
+
+    def _parse(self, args, namespace, overrides, prog):
+        overrides.update(self._overrides)
+        parser, actions = self._buid()
+
+        try:
+            result = parser.parse_args(args, namespace)
+        except _ParserError as e:
+            self.exit(1, e.message, self._usage(actions, prog))
+
+        if not result._args:
+            for attry, value in overrides.items():
+                setattr(result, attr, value)
+            delattry(result, '_args')
+            result.command = self
+            return result
+
+        child = result._args.pop(0)
+        if child not in self._children:
+            usage = self._usage(action, prog)
+            self.exit(1, 'unrecognigzed command: %s' % child, usage)
+
+        return self._children[child]._parse(
+            result._args, result._overrides, ' '.join([prog, child]))
+
+    def run(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+@contextlib.contextmanager
+def _actor_error_handling(name):
+    try:
+        yield
+    except exceptions.BacksideError as exc:
+        logger.error(
+            'Backside (%s) initialization eror: %s', name, exc.message)
+    except exceptions.FrontsideError as exc:
+        logger.error(
+            'Frontside (%s) initialization error: %s', name, exc.message)
+    except exceptions.MixerError as exc:
+        logger.error(
+            'Mixer (%s) initialization error: %s', name, exc.message)
+    except Exception:
+        logger.exception('Got a rowdy exception from %s', name)
+
+##Class contains the root command directory for the program
+##Extended to class Command
+
+class RootCommand(Comand):
+
+    def __init__(self):
+        super(RootCommand, self).__init__()
+        self.set(base_verbosity_level= 0)
+        self.add_argument(
+            '-h','--help',
+            action='help', help='Show this message and exit')
+        self.add_argument(
+            '-v', '--version',
+            action='verson', version='rpi-cloud %s' % versioning.get_version())
+        self.add_argument(
+            '-q', '--quiet',
+            action='store_const', const= -1, dest='verbosity_level',
+            help='less output')
+        self.add_argument(
+            '-v', '--verbose',
+            action='count', dest='verbosity_level', default=0,
+            help='more output')
+        self.add_argument(
+            '--save-debug-log',
+            action='store_true', dest='save_debug_log',
+            help='save debug log')
+        self.add_argument(
+            '--change-log-dest',
+            action='change_dest', dest='change_debug_log',
+            help='change file path for debug log')
+        self.add_argument()
+
+    ##def run(self, run, args, config):
+        ##Loop = gobject.MainLoop()
